@@ -100,13 +100,15 @@ class ProxyServer:
             del self.channel[out]
             del self.channel[self.s]
 
+        client = None
         for c in self.clients:
             if c[1] == self.s:
+                client = c
                 break
-            # validate if c exists in clients to prevent a crash
-            if c in self.clients:
-                self.clients.remove(c)
-                self.pm.removeClient(c[0])
+        # validate if c exists in clients to prevent a crash
+        if client in self.clients:
+            self.clients.remove(client)
+            self.pm.removeClient(client[0])
 
     def on_recv(self):
         data = self.data
