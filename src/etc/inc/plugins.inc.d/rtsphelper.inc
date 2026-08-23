@@ -47,7 +47,7 @@ function rtsphelper_start()
         return;
     }
 
-    shell_exec('/usr/local/bin/python3 /usr/local/opnsense/scripts/net/rtsphelper/rtsphelper.py > /dev/null 2>&1 &');
+    shell_exec('/usr/sbin/daemon -f /usr/local/bin/python3 /usr/local/opnsense/scripts/net/rtsphelper/rtsphelper.py');
 }
 
 function rtsphelper_stop()
@@ -89,29 +89,29 @@ function rtsphelper_forward_list()
 function rtsphelper_expand_cidr($forward_entry)
 {
     $result = array();
-    
+
     // Parse format: IP[/CIDR]:Port
     $parts = explode(':', $forward_entry);
     if (count($parts) != 2) {
         return $result;
     }
-    
+
     $ip_part = $parts[0];
     $port = $parts[1];
-    
+
     // Check if CIDR is present
     if (strpos($ip_part, '/') === false) {
         // Single IP, return as-is
         $result[] = $forward_entry;
         return $result;
     }
-    
+
     list($network, $cidr) = explode('/', $ip_part);
     $cidr = intval($cidr);
-    
+
     // Calculate number of hosts
     $host_count = pow(2, 32 - $cidr);
-    
+
     // Limit expansion to reasonable sizes to avoid memory issues
     // For /24 = 256 hosts, /16 = 65536 hosts (might be too much)
     if ($host_count > 65536) {
@@ -119,24 +119,24 @@ function rtsphelper_expand_cidr($forward_entry)
         log_error("RTSP Helper: CIDR /{$cidr} is too large to expand ({$host_count} hosts). Skipping.");
         return $result;
     }
-    
+
     // Convert IP to long
     $ip_long = ip2long($network);
     if ($ip_long === false) {
         return $result;
     }
-    
+
     // Calculate network address
     $mask = -1 << (32 - $cidr);
     $network_long = $ip_long & $mask;
-    
+
     // Generate all IPs in range
     for ($i = 0; $i < $host_count; $i++) {
         $current_ip_long = $network_long + $i;
         $current_ip = long2ip($current_ip_long);
         $result[] = "{$current_ip}:{$port}";
     }
-    
+
     return $result;
 }
 
